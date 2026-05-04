@@ -1,0 +1,29 @@
+2026-04-25 15:07:49.789210: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE SSE2 SSE3 SSE4.1 SSE4.2 AVX AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+[PlantGuard] Model loaded with tensorflow.keras
+ * Serving Flask app 'app'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5001
+Press CTRL+C to quit
+127.0.0.1 - - [25/Apr/2026 15:08:32] "HEAD / HTTP/1.1" 200 -
+127.0.0.1 - - [25/Apr/2026 15:08:32] "HEAD /login HTTP/1.1" 200 -
+127.0.0.1 - - [25/Apr/2026 15:08:32] "HEAD /dashboard HTTP/1.1" 302 -
+127.0.0.1 - - [25/Apr/2026 15:08:32] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [25/Apr/2026 15:10:58] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [25/Apr/2026 15:10:59] "GET /static/css/app.css HTTP/1.1" 200 -
+127.0.0.1 - - [25/Apr/2026 15:10:59] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [25/Apr/2026 15:11:02] "GET /login HTTP/1.1" 200 -
+127.0.0.1 - - [25/Apr/2026 15:11:02] "GET /static/css/app.css HTTP/1.1" 304 -
+127.0.0.1 - - [25/Apr/2026 15:11:19] "POST /login HTTP/1.1" 200 -
+127.0.0.1 - - [25/Apr/2026 15:11:19] "GET /static/css/app.css HTTP/1.1" 304 -
+127.0.0.1 - - [25/Apr/2026 15:11:23] "GET /signup HTTP/1.1" 200 -
+127.0.0.1 - - [25/Apr/2026 15:11:23] "GET /static/css/app.css HTTP/1.1" 304 -
+127.0.0.1 - - [25/Apr/2026 15:11:34] "POST /signup HTTP/1.1" 302 -
+127.0.0.1 - - [25/Apr/2026 15:11:34] "GET /dashboard HTTP/1.1" 200 -
+127.0.0.1 - - [25/Apr/2026 15:11:34] "GET /static/css/app.css HTTP/1.1" 304 -
+127.0.0.1 - - [25/Apr/2026 15:11:34] "GET /dashboard HTTP/1.1" 200 -
+127.0.0.1 - - [25/Apr/2026 15:12:05] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [25/Apr/2026 15:12:28] "GET /history HTTP/1.1" 200 -
+127.0.0.1 - - [25/Apr/2026 15:12:28] "GET /static/css/app.css HTTP/1.1" 304 -
+127.0.0.1 - - [25/Apr/2026 15:12:28] "GET /stats HTTP/1.1" 200 -

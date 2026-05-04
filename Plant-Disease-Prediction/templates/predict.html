@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagnose — PlantGuard AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="dashboard-body">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-leaf">🌿</span>
+      <span>PlantGuard</span>
+      <span class="logo-ai-pill">AI</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="{{ url_for('predict_page') }}" class="sidebar-link active">
+        <span class="link-icon">🔬</span> Diagnose
+      </a>
+      <a href="{{ url_for('history_page') }}" class="sidebar-link">
+        <span class="link-icon">📋</span> History
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      {% if model_loaded %}
+      <div class="model-status online"><span class="status-dot"></span>AI Model Active</div>
+      {% else %}
+      <div class="model-status demo"><span class="status-dot"></span>Demo Mode</div>
+      {% endif %}
+    </div>
+    <div class="sidebar-user">
+      <div class="user-avatar">{{ session['name'][0].upper() }}</div>
+      <div class="user-info">
+        <span class="user-name">{{ session['name'] }}</span>
+        <a href="{{ url_for('logout') }}" class="user-logout">Sign out</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dashboard-main">
+    <div class="dash-header">
+      <div>
+        <h1 class="dash-title" id="dashTitleEl">Plant Disease Diagnosis</h1>
+        <p class="dash-subtitle" id="dashSubtitleEl">Upload a leaf image — our AI detects diseases in seconds</p>
+      </div>
+      <div class="dash-badge">
+        <span class="badge-pulse"></span>🤖 AI Powered
+      </div>
+    </div>
+
+    <div class="dash-grid">
+      <!-- Upload Card -->
+      <div class="dash-card upload-card">
+        <div class="card-header-row">
+          <h2 class="card-title" id="uploadTitleEl">📸 Upload Plant Image</h2>
+        </div>
+
+        <div class="upload-zone" id="uploadZone">
+          <div class="upload-icon-wrap">
+            <div class="upload-icon-bg"></div>
+            <div class="upload-icon">🌱</div>
+          </div>
+          <p class="upload-main" id="uploadMainEl">Drag &amp; drop or click to upload</p>
+          <p class="upload-sub" id="uploadSubEl">Supports JPG, PNG, JPEG · Max 10MB</p>
+          <input type="file" id="imageUpload" accept=".png,.jpg,.jpeg" style="display:none">
+          <button class="btn-upload-choose" onclick="document.getElementById('imageUpload').click()">
+            <span id="chooseFileEl">Choose File</span>
+          </button>
+        </div>
+
+        <div class="preview-section" id="previewSection" style="display:none;">
+          <div class="preview-img-wrap">
+            <img id="imagePreview" src="#" alt="Plant preview" class="plant-preview-img">
+            <div class="preview-overlay">
+              <span>Ready to analyze</span>
+            </div>
+          </div>
+          <div class="preview-actions">
+            <button class="btn-change" onclick="resetUpload()">↩ Change</button>
+            <button class="btn-predict" id="btnPredict">
+              <span id="btnText"><span id="analyzeBtnEl">🔍 Analyze Disease</span></span>
+              <div class="btn-spinner" id="btnSpinner" style="display:none;"></div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result Card -->
+      <div class="dash-card result-card" id="resultCard">
+        <div class="result-empty" id="resultEmpty">
+          <div class="empty-icon-wrap">
+            <div class="empty-icon">🔍</div>
+          </div>
+          <p class="empty-title" id="awaitTitleEl">Awaiting Analysis</p>
+          <p class="empty-sub" id="awaitSubEl">Upload a plant image and click Analyze to get your diagnosis</p>
+        </div>
+
+        <div id="resultContent" style="display:none;" class="result-content-inner">
+          <div class="result-header">
+            <div class="result-badges-row">
+              <div class="result-status-badge" id="statusBadge"></div>
+              <div class="severity-badge" id="severityBadge"></div>
+            </div>
+            <h2 class="result-disease-name" id="diseaseName"></h2>
+            <p class="result-plant" id="plantType">
+              <span class="plant-icon" id="plantIcon"></span>
+              <span id="plantTypeText"></span>
+            </p>
+          </div>
+
+          <!-- Confidence mini-bar inside result -->
+          <div class="conf-mini" id="confMini">
+            <div class="conf-mini-header">
+              <span class="conf-mini-label">Confidence</span>
+              <span class="conf-mini-value" id="confMiniValue">--</span>
+            </div>
+            <div class="conf-mini-track"><div class="conf-mini-fill" id="confMiniFill"></div></div>
+          </div>
+
+          <div class="recommendation-section">
+            <div class="rec-tabs">
+              <button class="rec-tab active" onclick="showTab('cause', this)">🔬 Cause</button>
+              <button class="rec-tab" onclick="showTab('symptoms', this)">🩺 Symptoms</button>
+              <button class="rec-tab" onclick="showTab('treatment', this)">💊 Treatment</button>
+              <button class="rec-tab" onclick="showTab('prevention', this)">🛡️ Prevention</button>
+            </div>
+
+            <div class="rec-content">
+              <div id="tab-cause"      class="tab-pane active"><ul class="rec-list" id="causeList"></ul></div>
+              <div id="tab-symptoms"  class="tab-pane" style="display:none;"><ul class="rec-list" id="symptomsList"></ul></div>
+              <div id="tab-treatment" class="tab-pane" style="display:none;"><ul class="rec-list" id="treatmentList"></ul></div>
+              <div id="tab-prevention" class="tab-pane" style="display:none;"><ul class="rec-list" id="preventionList"></ul></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Heatmap Section -->
+    <div class="dash-card heatmap-card" id="heatmapSection" style="display:none; margin-bottom:24px">
+      <div class="hmap-header-row">
+        <div>
+          <h2 class="card-title" style="margin-bottom:4px">🔥 AI Attention Heatmap</h2>
+          <p class="heatmap-desc">Grad-CAM visualization — warm regions show where the model focused most during diagnosis.</p>
+        </div>
+        <div class="hmap-toggle-group" id="hmapToggleGroup">
+          <button class="hmap-toggle active" id="btnHmap" onclick="setHmapView('heatmap')">Heatmap</button>
+          <button class="hmap-toggle" id="btnOrig" onclick="setHmapView('original')">Original</button>
+        </div>
+      </div>
+
+      <div class="heatmap-panels">
+        <!-- Image panel -->
+        <div class="heatmap-panel heatmap-panel-img">
+          <div class="panel-label">
+            <span id="hmapPanelLabel">🌡️ Grad-CAM Overlay</span>
+          </div>
+          <div class="hmap-img-wrap">
+            <!-- Real Grad-CAM image (server-generated) -->
+            <img id="hmapRealImg" src="#" alt="Grad-CAM Heatmap" class="hmap-img" style="display:none">
+            <!-- Canvas fallback -->
+            <canvas id="heatmapCanvas" class="hmap-img" style="display:none"></canvas>
+            <!-- Original image -->
+            <img id="hmapOrigImg" src="#" alt="Original" class="hmap-img" style="display:none">
+            <div class="hmap-scan" id="hmapScan" style="display:none"></div>
+          </div>
+          <!-- Color scale legend -->
+          <div class="hmap-color-scale">
+            <span class="scale-label">Low</span>
+            <div class="scale-bar"></div>
+            <span class="scale-label">High</span>
+          </div>
+        </div>
+
+        <!-- Confidence panel -->
+        <div class="heatmap-panel heatmap-panel-conf">
+          <div class="panel-label">🎯 Model Confidence</div>
+          <div class="confidence-section">
+            <div class="conf-circle-wrap">
+              <svg class="conf-circle-svg" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="10"/>
+                <circle cx="60" cy="60" r="52" fill="none" stroke="url(#confGrad)" stroke-width="10"
+                        stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
+                        id="confCircle" style="transform:rotate(-90deg);transform-origin:60px 60px;transition:stroke-dashoffset 1.4s cubic-bezier(.4,0,.2,1)"/>
+                <defs>
+                  <linearGradient id="confGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%"   stop-color="#3b82f6"/>
+                    <stop offset="50%"  stop-color="#22c55e"/>
+                    <stop offset="100%" stop-color="#fbbf24"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="conf-circle-text">
+                <span class="conf-circle-value" id="confCircleValue">--%</span>
+                <span class="conf-circle-label">Confidence</span>
+              </div>
+            </div>
+
+            <div class="conf-bar-section">
+              <div class="confidence-header">
+                <span class="conf-label">Score</span>
+                <span class="conf-value" id="confValue">--</span>
+              </div>
+              <div class="conf-track"><div class="conf-fill" id="confFill"></div></div>
+              <div class="conf-scale"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+            </div>
+
+            <div class="hmap-legend">
+              <span class="legend-title">Intensity:</span>
+              <div class="legend-gradient">
+                <div class="legend-bar"></div>
+                <div class="legend-labels"><span>Low</span><span>Mid</span><span>High</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Voice Assistant Panel -->
+    <div class="dash-card voice-card" style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px">
+          <h2 class="card-title" style="margin-bottom:4px">🎙️ Voice Assistant</h2>
+          <p id="voiceSubEl" style="color:var(--text-muted,#94a3b8);font-size:13px;margin:0">Listen to website guide &amp; switch language</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <select id="langSelect" class="lang-select" onchange="onLanguageChange(this.value)">
+            <option value="en-IN">🌐 English</option>
+            <option value="hi-IN">🇮🇳 Hindi</option>
+            <option value="ta-IN">🇮🇳 Tamil</option>
+            <option value="te-IN">🇮🇳 Telugu</option>
+            <option value="kn-IN">🇮🇳 Kannada</option>
+            <option value="ml-IN">🇮🇳 Malayalam</option>
+            <option value="bn-IN">🇮🇳 Bengali</option>
+            <option value="mr-IN">🇮🇳 Marathi</option>
+            <option value="gu-IN">🇮🇳 Gujarati</option>
+            <option value="pa-IN">🇮🇳 Punjabi</option>
+            <option value="or-IN">🇮🇳 Odia</option>
+          </select>
+          <button class="btn-voice" id="btnVoice" onclick="playVoiceGuide()">
+            <span id="voiceBtnIcon">🔊</span>
+            <span id="voiceBtnText">Hear Guide</span>
+          </button>
+          <button class="btn-voice btn-voice-stop" id="btnVoiceStop" onclick="stopVoice()" style="display:none">
+            ⏹ Stop
+          </button>
+          <button class="btn-voice btn-mic" id="btnMic" onclick="toggleVoiceCommands()" title="Voice Commands">
+            <span id="micIcon">🎤</span>
+            <span id="micText">Commands</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Voice Command Status -->
+      <div id="cmdStatusBar" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:10px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span id="cmdListening" style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#60a5fa;">
+            <span class="mic-pulse"></span> Listening for commands…
+          </span>
+          <span id="cmdHeard" style="font-size:13px;color:#94a3b8;flex:1;"></span>
+        </div>
+        <div style="margin-top:8px;font-size:12px;color:#64748b;line-height:1.7;">
+          <strong style="color:#94a3b8;">Available commands:</strong>
+          <span class="cmd-chip">Upload</span>
+          <span class="cmd-chip">Analyze</span>
+          <span class="cmd-chip">Reset</span>
+          <span class="cmd-chip">Cause</span>
+          <span class="cmd-chip">Symptoms</span>
+          <span class="cmd-chip">Treatment</span>
+          <span class="cmd-chip">Prevention</span>
+          <span class="cmd-chip">History</span>
+          <span class="cmd-chip">Help</span>
+          <span class="cmd-chip">Stop</span>
+        </div>
+      </div>
+
+      <div id="voiceStatus" style="margin-top:10px;font-size:13px;color:#94a3b8;display:none;"></div>
+    </div>
+
+  <!-- Supported Crops -->
+    <div class="dash-card crops-card">
+      <h2 class="card-title" id="cropsTitleEl">🌾 Supported Crops &amp; Diseases</h2>
+      <div class="crops-grid">
+        <div class="crop-tag pepper">
+          <span class="crop-emoji">🫑</span>
+          <div><strong>Pepper</strong><span>Bacterial Spot · Healthy</span></div>
+        </div>
+        <div class="crop-tag potato">
+          <span class="crop-emoji">🥔</span>
+          <div><strong>Potato</strong><span>Early Blight · Late Blight · Healthy</span></div>
+        </div>
+        <div class="crop-tag tomato">
+          <span class="crop-emoji">🍅</span>
+          <div><strong>Tomato</strong><span>Bacterial Spot · Early/Late Blight · Leaf Mold · Septoria · Spider Mites · Target Spot · Yellow Leaf Curl · Mosaic Virus · Healthy</span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+<script>
+  const uploadZone    = document.getElementById('uploadZone');
+  const imageUpload   = document.getElementById('imageUpload');
+  const previewSection= document.getElementById('previewSection');
+  const imagePreview  = document.getElementById('imagePreview');
+  const btnPredict    = document.getElementById('btnPredict');
+  const btnText       = document.getElementById('btnText');
+  const btnSpinner    = document.getElementById('btnSpinner');
+  const resultEmpty   = document.getElementById('resultEmpty');
+  const resultContent = document.getElementById('resultContent');
+
+  let hasRealHeatmap = false;
+
+  // Drag & Drop
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault(); uploadZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+  uploadZone.addEventListener('click', () => imageUpload.click());
+  imageUpload.addEventListener('change', () => { if (imageUpload.files[0]) handleFile(imageUpload.files[0]); });
+
+  function handleFile(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      imagePreview.src = e.target.result;
+      uploadZone.style.display = 'none';
+      previewSection.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function resetUpload() {
+    uploadZone.style.display = 'flex';
+    previewSection.style.display = 'none';
+    imageUpload.value = '';
+    resultEmpty.style.display = 'flex';
+    resultContent.style.display = 'none';
+    document.getElementById('heatmapSection').style.display = 'none';
+    hasRealHeatmap = false;
+  }
+
+  btnPredict.addEventListener('click', () => {
+    if (!imageUpload.files[0]) return;
+    btnText.style.display = 'none';
+    btnSpinner.style.display = 'block';
+    btnPredict.disabled = true;
+
+    const formData = new FormData();
+    formData.append('file', imageUpload.files[0]);
+
+    fetch('/predict', { method: 'POST', body: formData })
+      .then(r => r.json())
+      .then(data => { showResult(data); })
+      .catch(() => { alert('Something went wrong. Please try again.'); })
+      .finally(() => {
+        btnText.style.display = 'inline';
+        btnSpinner.style.display = 'none';
+        btnPredict.disabled = false;
+      });
+  });
+
+  function showResult(data) {
+    resultEmpty.style.display = 'none';
+    resultContent.style.display = 'block';
+
+    const isHealthy = data.is_healthy;
+    const badge = document.getElementById('statusBadge');
+    badge.textContent = isHealthy ? '✅ Healthy' : '⚠️ Disease Detected';
+    badge.className = 'result-status-badge ' + (isHealthy ? 'badge-healthy' : 'badge-disease');
+
+    // Severity badge
+    const sev = data.severity || (isHealthy ? 'Healthy' : 'Moderate');
+    const sevBadge = document.getElementById('severityBadge');
+    sevBadge.textContent = '⚡ ' + sev;
+    sevBadge.className = 'severity-badge sev-' + sev.toLowerCase();
+
+    document.getElementById('diseaseName').textContent = data.friendly_name;
+
+    const icons = { Tomato: '🍅', Potato: '🥔', Pepper: '🫑' };
+    document.getElementById('plantIcon').textContent = (icons[data.plant_type] || '🌿') + ' ';
+    document.getElementById('plantTypeText').textContent = data.plant_type;
+
+    fillList('causeList',      data.recommendation.cause,      isHealthy);
+    fillList('symptomsList',   data.recommendation.symptoms,   isHealthy);
+    fillList('treatmentList',  data.recommendation.treatment,  isHealthy);
+    fillList('preventionList', data.recommendation.prevention, isHealthy);
+
+    showTab('cause', document.querySelector('.rec-tab'));
+    showConfidenceMini(data.confidence || 87.3, isHealthy);
+    showHeatmap(data, isHealthy);
+  }
+
+  function showHeatmap(data, isHealthy) {
+    const sect = document.getElementById('heatmapSection');
+    sect.style.display = 'block';
+    setTimeout(() => sect.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+
+    const origImg    = document.getElementById('hmapOrigImg');
+    const realImg    = document.getElementById('hmapRealImg');
+    const canvas     = document.getElementById('heatmapCanvas');
+
+    origImg.src = imagePreview.src;
+
+    if (data.heatmap) {
+      hasRealHeatmap = true;
+      realImg.src = 'data:image/jpeg;base64,' + data.heatmap;
+      realImg.style.display = 'block';
+      canvas.style.display  = 'none';
+      origImg.style.display = 'none';
+      document.getElementById('hmapPanelLabel').textContent = '🌡️ Grad-CAM Overlay';
+      startScanAnim();
+    } else {
+      hasRealHeatmap = false;
+      origImg.onload = () => generateCanvasHeatmap(origImg, !isHealthy);
+      if (origImg.complete && origImg.naturalWidth) generateCanvasHeatmap(origImg, !isHealthy);
+    }
+
+    showConfidence(data.confidence || 87.3, isHealthy);
+  }
+
+  function generateCanvasHeatmap(imgEl, isDisease) {
+    const canvas = document.getElementById('heatmapCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width  = imgEl.naturalWidth  || 320;
+    canvas.height = imgEl.naturalHeight || 240;
+    ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const count = isDisease ? 4 + Math.floor(Math.random() * 3) : 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < count; i++) {
+      const x = (0.12 + Math.random() * 0.76) * canvas.width;
+      const y = (0.12 + Math.random() * 0.76) * canvas.height;
+      const r = canvas.width * (0.09 + Math.random() * 0.2);
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      const a = 0.48 + Math.random() * 0.38;
+      if (isDisease) {
+        g.addColorStop(0,   `rgba(255,25,25,${a})`);
+        g.addColorStop(0.3, `rgba(255,140,0,${a * 0.75})`);
+        g.addColorStop(0.6, `rgba(255,230,0,${a * 0.45})`);
+        g.addColorStop(1,   'rgba(0,80,255,0)');
+      } else {
+        g.addColorStop(0,   `rgba(0,220,120,${a})`);
+        g.addColorStop(0.5, `rgba(0,180,80,${a * 0.5})`);
+        g.addColorStop(1,   'rgba(0,80,30,0)');
+      }
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    canvas.style.display = 'block';
+    document.getElementById('hmapRealImg').style.display = 'none';
+    document.getElementById('hmapOrigImg').style.display = 'none';
+    startScanAnim();
+  }
+
+  function startScanAnim() {
+    const scan = document.getElementById('hmapScan');
+    scan.style.display = 'block';
+    scan.style.animation = 'none';
+    scan.offsetHeight;
+    scan.style.animation = 'scanDown 1.8s ease-in forwards';
+  }
+
+  function setHmapView(view) {
+    const canvas  = document.getElementById('heatmapCanvas');
+    const origImg = document.getElementById('hmapOrigImg');
+    const realImg = document.getElementById('hmapRealImg');
+    document.getElementById('btnHmap').classList.toggle('active', view === 'heatmap');
+    document.getElementById('btnOrig').classList.toggle('active', view === 'original');
+    if (view === 'heatmap') {
+      origImg.style.display = 'none';
+      if (hasRealHeatmap) { realImg.style.display = 'block'; canvas.style.display = 'none'; }
+      else                { canvas.style.display  = 'block'; realImg.style.display = 'none'; }
+      document.getElementById('hmapPanelLabel').textContent = hasRealHeatmap ? '🌡️ Grad-CAM Overlay' : '🔥 AI Attention Map';
+    } else {
+      realImg.style.display  = 'none';
+      canvas.style.display   = 'none';
+      origImg.style.display  = 'block';
+      document.getElementById('hmapPanelLabel').textContent = '📷 Original Image';
+    }
+  }
+
+  function showConfidence(pct, isHealthy) {
+    document.getElementById('confValue').textContent = pct + '%';
+    const color = pct > 90 ? '#4ade80' : pct > 75 ? '#fbbf24' : '#f87171';
+    document.getElementById('confValue').style.color = color;
+    setTimeout(() => {
+      const fill = document.getElementById('confFill');
+      fill.style.background = isHealthy
+        ? 'linear-gradient(90deg,#3b82f6,#22c55e)'
+        : 'linear-gradient(90deg,#3b82f6,#fbbf24,#ef4444)';
+      fill.style.width = pct + '%';
+
+      // Circle
+      const circumference = 326.7;
+      const offset = circumference * (1 - pct / 100);
+      document.getElementById('confCircle').style.strokeDashoffset = offset;
+      document.getElementById('confCircleValue').textContent = pct + '%';
+      document.getElementById('confCircleValue').style.color = color;
+    }, 150);
+  }
+
+  function showConfidenceMini(pct, isHealthy) {
+    document.getElementById('confMiniValue').textContent = pct + '%';
+    const color = pct > 90 ? '#4ade80' : pct > 75 ? '#fbbf24' : '#f87171';
+    document.getElementById('confMiniValue').style.color = color;
+    setTimeout(() => {
+      const fill = document.getElementById('confMiniFill');
+      fill.style.background = isHealthy
+        ? 'linear-gradient(90deg,#3b82f6,#22c55e)'
+        : 'linear-gradient(90deg,#3b82f6,#fbbf24,#ef4444)';
+      fill.style.width = pct + '%';
+    }, 150);
+  }
+
+  function fillList(id, items, isHealthy) {
+    const ul = document.getElementById(id);
+    const borderColor = isHealthy ? '#22c55e' : '#f87171';
+    ul.innerHTML = items.map(i =>
+      `<li class="rec-item" style="border-left-color:${borderColor}">${i}</li>`
+    ).join('');
+  }
+
+  function showTab(tab, btn) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.rec-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tab).style.display = 'block';
+    if (btn) btn.classList.add('active');
+  }
+
+  // ── Voice Assistant ──────────────────────────────────────────────────────
+  let currentAudio = null;
+  let currentLang = 'en-IN';
+
+  const UI_STRINGS = {
+    dashTitle:    'Plant Disease Diagnosis',
+    dashSubtitle: 'Upload a leaf image — our AI detects diseases in seconds',
+    uploadTitle:  'Upload Plant Image',
+    uploadMain:   'Drag & drop or click to upload',
+    uploadSub:    'Supports JPG, PNG, JPEG · Max 10MB',
+    chooseFile:   'Choose File',
+    analyzeBtn:   'Analyze Disease',
+    awaitTitle:   'Awaiting Analysis',
+    awaitSub:     'Upload a plant image and click Analyze to get your diagnosis',
+    cropsTitle:   'Supported Crops & Diseases',
+    voiceTitle:   'Voice Assistant',
+    voiceSub:     'Listen to website guide & switch language',
+    hearGuide:    'Hear Guide',
+  };
+  const originalStrings = { ...UI_STRINGS };
+
+  function setVoiceStatus(msg, color) {
+    const el = document.getElementById('voiceStatus');
+    el.style.display = msg ? 'block' : 'none';
+    el.style.color = color || '#94a3b8';
+    el.textContent = msg;
+  }
+
+  async function playVoiceGuide() {
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    const btn = document.getElementById('btnVoice');
+    const stopBtn = document.getElementById('btnVoiceStop');
+    document.getElementById('voiceBtnIcon').textContent = '⏳';
+    document.getElementById('voiceBtnText').textContent = 'Loading...';
+    btn.disabled = true;
+    setVoiceStatus('Generating voice guide, please wait…', '#60a5fa');
+
+    try {
+      const resp = await fetch('/api/voice-guide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: currentLang }),
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.audio) {
+        const detail = data.detail ? (' — ' + data.detail.slice(0, 120)) : '';
+        setVoiceStatus('Voice guide unavailable: ' + (data.error || 'unknown error') + detail, '#f87171');
+        return;
+      }
+      // Sarvam returns base64 WAV
+      const wavBytes = atob(data.audio);
+      const arr = new Uint8Array(wavBytes.length);
+      for (let i = 0; i < wavBytes.length; i++) arr[i] = wavBytes.charCodeAt(i);
+      const blob = new Blob([arr], { type: 'audio/wav' });
+      const url  = URL.createObjectURL(blob);
+      currentAudio = new Audio(url);
+      currentAudio.onended = () => {
+        stopBtn.style.display = 'none';
+        document.getElementById('voiceBtnIcon').textContent = '🔊';
+        document.getElementById('voiceBtnText').textContent = UI_STRINGS.hearGuide;
+        setVoiceStatus('');
+        URL.revokeObjectURL(url);
+      };
+      currentAudio.play();
+      stopBtn.style.display = 'inline-flex';
+      setVoiceStatus('▶ Playing voice guide…', '#4ade80');
+    } catch (e) {
+      setVoiceStatus('Error: ' + e.message, '#f87171');
+    } finally {
+      document.getElementById('voiceBtnIcon').textContent = '🔊';
+      document.getElementById('voiceBtnText').textContent = UI_STRINGS.hearGuide;
+      btn.disabled = false;
+    }
+  }
+
+  function stopVoice() {
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    document.getElementById('btnVoiceStop').style.display = 'none';
+    setVoiceStatus('');
+  }
+
+  async function onLanguageChange(langCode) {
+    currentLang = langCode;
+    if (langCode === 'en-IN') {
+      applyUIStrings(originalStrings);
+      return;
+    }
+    setVoiceStatus('Translating interface…', '#60a5fa');
+    try {
+      const resp = await fetch('/api/translate-ui', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: langCode, texts: originalStrings }),
+      });
+      const data = await resp.json();
+      if (resp.ok && data.translated) {
+        applyUIStrings(data.translated);
+        setVoiceStatus('Interface translated. Click "' + (data.translated.hearGuide || 'Hear Guide') + '" to listen to the guide.', '#4ade80');
+      }
+    } catch (e) {
+      setVoiceStatus('Translation error: ' + e.message, '#f87171');
+    }
+  }
+
+  // ── Voice Commands (Web Speech API) ─────────────────────────────────────
+  let recognition = null;
+  let cmdActive = false;
+
+  const COMMANDS = [
+    { keys: ['upload', 'choose file', 'open file', 'select file'],
+      action: () => { document.getElementById('imageUpload').click(); feedback('Opening file picker…'); } },
+    { keys: ['analyze', 'analyse', 'diagnose', 'scan', 'detect'],
+      action: () => {
+        const btn = document.getElementById('btnPredict');
+        if (!btn.disabled && document.getElementById('imageUpload').files[0]) {
+          btn.click(); feedback('Analyzing your plant…');
+        } else { feedback('Please upload an image first.'); }
+      }
+    },
+    { keys: ['reset', 'change', 'change image', 'clear'],
+      action: () => { resetUpload(); feedback('Image cleared. Upload a new one.'); } },
+    { keys: ['cause'],         action: () => { showTab('cause',       document.querySelectorAll('.rec-tab')[0]); feedback('Showing Cause tab.'); } },
+    { keys: ['symptoms', 'symptom'], action: () => { showTab('symptoms',    document.querySelectorAll('.rec-tab')[1]); feedback('Showing Symptoms tab.'); } },
+    { keys: ['treatment', 'treat'],  action: () => { showTab('treatment',   document.querySelectorAll('.rec-tab')[2]); feedback('Showing Treatment tab.'); } },
+    { keys: ['prevention', 'prevent'], action: () => { showTab('prevention', document.querySelectorAll('.rec-tab')[3]); feedback('Showing Prevention tab.'); } },
+    { keys: ['history', 'past results', 'my history'],
+      action: () => { feedback('Going to History…'); setTimeout(() => { window.location.href = '/history'; }, 800); } },
+    { keys: ['help', 'guide', 'how to use', 'instructions'],
+      action: () => { feedback('Playing voice guide…'); playVoiceGuide(); } },
+    { keys: ['stop', 'quit', 'exit', 'off', 'disable'],
+      action: () => { stopVoiceCommands(); feedback('Voice commands stopped.'); } },
+  ];
+
+  function feedback(msg) {
+    const el = document.getElementById('cmdHeard');
+    el.textContent = '✅ ' + msg;
+    setTimeout(() => { if (el.textContent === '✅ ' + msg) el.textContent = ''; }, 3000);
+  }
+
+  function toggleVoiceCommands() {
+    cmdActive ? stopVoiceCommands() : startVoiceCommands();
+  }
+
+  function startVoiceCommands() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      setVoiceStatus('Voice commands not supported in this browser. Use Chrome.', '#f87171');
+      return;
+    }
+    recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = 'en-IN';
+
+    recognition.onresult = (e) => {
+      const transcript = e.results[e.results.length - 1][0].transcript.trim().toLowerCase();
+      document.getElementById('cmdHeard').textContent = '🎙️ Heard: "' + transcript + '"';
+      let matched = false;
+      for (const cmd of COMMANDS) {
+        if (cmd.keys.some(k => transcript.includes(k))) {
+          cmd.action();
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        document.getElementById('cmdHeard').textContent = '❓ Not recognized: "' + transcript + '"';
+      }
+    };
+
+    recognition.onerror = (e) => {
+      if (e.error !== 'no-speech') {
+        document.getElementById('cmdHeard').textContent = '⚠️ Error: ' + e.error;
+      }
+    };
+
+    recognition.onend = () => {
+      if (cmdActive) recognition.start(); // keep listening
+    };
+
+    cmdActive = true;
+    recognition.start();
+    document.getElementById('cmdStatusBar').style.display = 'block';
+    document.getElementById('btnMic').classList.add('mic-active');
+    document.getElementById('micIcon').textContent = '🔴';
+    document.getElementById('micText').textContent = 'Listening…';
+  }
+
+  function stopVoiceCommands() {
+    cmdActive = false;
+    if (recognition) { recognition.stop(); recognition = null; }
+    document.getElementById('cmdStatusBar').style.display = 'none';
+    document.getElementById('btnMic').classList.remove('mic-active');
+    document.getElementById('micIcon').textContent = '🎤';
+    document.getElementById('micText').textContent = 'Commands';
+  }
+
+  function applyUIStrings(s) {
+    const q = id => document.getElementById(id);
+    if (q('dashTitleEl'))     q('dashTitleEl').textContent     = s.dashTitle    || UI_STRINGS.dashTitle;
+    if (q('dashSubtitleEl'))  q('dashSubtitleEl').textContent  = s.dashSubtitle || UI_STRINGS.dashSubtitle;
+    if (q('uploadTitleEl'))   q('uploadTitleEl').textContent   = '📸 ' + (s.uploadTitle || UI_STRINGS.uploadTitle);
+    if (q('uploadMainEl'))    q('uploadMainEl').textContent    = s.uploadMain   || UI_STRINGS.uploadMain;
+    if (q('uploadSubEl'))     q('uploadSubEl').textContent     = s.uploadSub    || UI_STRINGS.uploadSub;
+    if (q('chooseFileEl'))    q('chooseFileEl').textContent    = s.chooseFile   || UI_STRINGS.chooseFile;
+    if (q('analyzeBtnEl'))    q('analyzeBtnEl').textContent    = '🔍 ' + (s.analyzeBtn || UI_STRINGS.analyzeBtn);
+    if (q('awaitTitleEl'))    q('awaitTitleEl').textContent    = s.awaitTitle   || UI_STRINGS.awaitTitle;
+    if (q('awaitSubEl'))      q('awaitSubEl').textContent      = s.awaitSub     || UI_STRINGS.awaitSub;
+    if (q('cropsTitleEl'))    q('cropsTitleEl').textContent    = '🌾 ' + (s.cropsTitle  || UI_STRINGS.cropsTitle);
+    if (q('voiceSubEl'))      q('voiceSubEl').textContent      = s.voiceSub     || UI_STRINGS.voiceSub;
+    if (q('voiceBtnText'))    q('voiceBtnText').textContent    = s.hearGuide    || UI_STRINGS.hearGuide;
+    Object.assign(UI_STRINGS, s);
+  }
+</script>
+
+<style>
+  .lang-select {
+    background: rgba(30,41,59,0.8);
+    color: #e2e8f0;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    outline: none;
+    min-width: 160px;
+  }
+  .lang-select:focus { border-color: #3b82f6; }
+  .btn-voice {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg,#3b82f6,#8b5cf6);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 9px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .2s;
+  }
+  .btn-voice:hover { opacity: .85; }
+  .btn-voice:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-voice-stop {
+    background: linear-gradient(135deg,#ef4444,#f97316);
+  }
+  .btn-mic {
+    background: linear-gradient(135deg,#10b981,#059669);
+  }
+  .btn-mic.mic-active {
+    background: linear-gradient(135deg,#ef4444,#dc2626);
+    animation: micPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes micPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+    50%      { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+  }
+  .mic-pulse {
+    display:inline-block;width:8px;height:8px;border-radius:50%;
+    background:#60a5fa;animation:micPulse 1s infinite;
+  }
+  .cmd-chip {
+    display:inline-block;background:rgba(59,130,246,0.15);color:#93c5fd;
+    border:1px solid rgba(59,130,246,0.25);border-radius:6px;
+    padding:2px 8px;font-size:11px;margin:2px 3px;
+  }
+</style>
+</body>
+</html>

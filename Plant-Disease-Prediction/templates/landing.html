@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlantGuard AI — Smart Plant Disease Detection</title>
+  <meta name="description" content="AI-powered plant disease detection. Upload a photo and get instant diagnosis with treatment recommendations.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="landing-body">
+
+  <!-- Navbar -->
+  <nav class="landing-nav">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <span class="logo-icon">🌿</span>
+        <span class="logo-text">PlantGuard <span class="logo-ai">AI</span></span>
+      </div>
+      <div class="nav-links">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#how-it-works" class="nav-link">How It Works</a>
+        <a href="{{ url_for('login') }}" class="btn-outline-nav">Login</a>
+        <a href="{{ url_for('signup') }}" class="btn-filled-nav">Get Started</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="hero-orb orb1"></div>
+      <div class="hero-orb orb2"></div>
+      <div class="hero-orb orb3"></div>
+    </div>
+    <div class="hero-content">
+      <div class="hero-badge">🤖 AI-Powered Plant Health</div>
+      <h1 class="hero-title">
+        Protect Your Crops<br>
+        <span class="gradient-text">Before It's Too Late</span>
+      </h1>
+      <p class="hero-subtitle">
+        Upload a photo of your plant, get an instant AI diagnosis, and receive expert treatment recommendations — all in seconds.
+      </p>
+      <div class="hero-cta">
+        <a href="{{ url_for('signup') }}" class="btn-primary-hero">
+          <span>Start Free Analysis</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="#how-it-works" class="btn-ghost-hero">See How It Works</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-item">
+          <span class="stat-number">15+</span>
+          <span class="stat-label">Diseases Detected</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-number">98%</span>
+          <span class="stat-label">Accuracy Rate</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-number">3s</span>
+          <span class="stat-label">Avg. Analysis Time</span>
+        </div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-card-float">
+        <div class="card-glow"></div>
+        <div class="floating-card">
+          <div class="card-icon">🔬</div>
+          <div class="card-text">
+            <strong>Disease Detected</strong>
+            <span>Tomato Early Blight</span>
+          </div>
+          <div class="card-badge success">92% Match</div>
+        </div>
+        <div class="floating-card card-2">
+          <div class="card-icon">💊</div>
+          <div class="card-text">
+            <strong>Treatment Ready</strong>
+            <span>3 recommendations</span>
+          </div>
+          <div class="card-badge info">View →</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features" id="features">
+    <div class="section-container">
+      <div class="section-header">
+        <span class="section-badge">Why PlantGuard?</span>
+        <h2 class="section-title">Everything you need to keep your crops healthy</h2>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon" style="background: linear-gradient(135deg,#22c55e22,#16a34a22);">📸</div>
+          <h3>Instant Upload</h3>
+          <p>Simply snap a photo of the infected leaf and upload it. Our system handles the rest within seconds.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background: linear-gradient(135deg,#3b82f622,#1d4ed822);">🧠</div>
+          <h3>AI-Powered Diagnosis</h3>
+          <p>Powered by a DenseNet121 deep learning model trained on thousands of plant images for high accuracy.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background: linear-gradient(135deg,#f59e0b22,#d9770622);">💡</div>
+          <h3>Expert Recommendations</h3>
+          <p>Get tailored treatment steps, pesticide advice, and prevention tips for every detected disease.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background: linear-gradient(135deg,#a855f722,#7c3aed22);">🌾</div>
+          <h3>Multi-Crop Support</h3>
+          <p>Supports Tomato, Potato, and Pepper plants — with more crops being added regularly.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="section-container">
+      <div class="section-header">
+        <span class="section-badge">Simple Process</span>
+        <h2 class="section-title">Three steps to a healthier farm</h2>
+      </div>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-num">01</div>
+          <div class="step-icon">📝</div>
+          <h3>Create Account</h3>
+          <p>Sign up in seconds with just your name and email.</p>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-card">
+          <div class="step-num">02</div>
+          <div class="step-icon">🌿</div>
+          <h3>Upload Plant Photo</h3>
+          <p>Take a clear photo of the infected part of your plant and upload it.</p>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-card">
+          <div class="step-num">03</div>
+          <div class="step-icon">✅</div>
+          <h3>Get Results</h3>
+          <p>Receive diagnosis and a full treatment plan instantly.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-bg">
+      <div class="cta-orb"></div>
+    </div>
+    <div class="cta-content">
+      <h2>Ready to protect your plants?</h2>
+      <p>Join farmers and gardeners using AI to save their crops.</p>
+      <a href="{{ url_for('signup') }}" class="btn-primary-hero">Get Started for Free</a>
+    </div>
+  </section>
+
+</body>
+</html>

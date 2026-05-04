@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>History — PlantGuard AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="dashboard-body">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-leaf">🌿</span>
+      <span>PlantGuard</span>
+      <span class="logo-ai-pill">AI</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="{{ url_for('predict_page') }}" class="sidebar-link">
+        <span class="link-icon">🔬</span> Diagnose
+      </a>
+      <a href="{{ url_for('history_page') }}" class="sidebar-link active">
+        <span class="link-icon">📋</span> History
+      </a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar">{{ session['name'][0].upper() }}</div>
+      <div class="user-info">
+        <span class="user-name">{{ session['name'] }}</span>
+        <a href="{{ url_for('logout') }}" class="user-logout">Sign out</a>
+      </div>
+    </div>
+  </aside>
+
+  <main class="dashboard-main">
+    <div class="dash-header">
+      <div>
+        <h1 class="dash-title">Prediction History</h1>
+        <p class="dash-subtitle">Analytics &amp; all your past plant disease analyses</p>
+      </div>
+      <a href="{{ url_for('predict_page') }}" class="dash-badge dash-badge-link">
+        + New Analysis
+      </a>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-card stat-total">
+        <div class="stat-icon">📊</div>
+        <span class="stat-card-number" id="statTotal">0</span>
+        <span class="stat-card-label">Total Scans</span>
+      </div>
+      <div class="stat-card stat-disease">
+        <div class="stat-icon">🦠</div>
+        <span class="stat-card-number" id="statDisease">0</span>
+        <span class="stat-card-label">Diseases Found</span>
+      </div>
+      <div class="stat-card stat-healthy">
+        <div class="stat-icon">✅</div>
+        <span class="stat-card-number" id="statHealthy">0</span>
+        <span class="stat-card-label">Healthy Plants</span>
+      </div>
+    </div>
+
+    <!-- Disease Detection Heatmap Matrix -->
+    <div class="dash-card heatmap-matrix-card">
+      <div class="matrix-header">
+        <div>
+          <h2 class="matrix-title">🗺️ Disease Detection Heatmap</h2>
+          <p class="matrix-subtitle">Color intensity shows detection frequency per plant type. Hover cells to highlight.</p>
+        </div>
+        <div class="matrix-legend-row">
+          <span class="mat-legend mat-legend-disease">Disease</span>
+          <span class="mat-legend mat-legend-healthy">Healthy</span>
+        </div>
+      </div>
+      <div class="matrix-wrap">
+        <table class="heatmap-matrix">
+          <thead>
+            <tr>
+              <th class="hmatrix-th" style="text-align:left">Plant Type</th>
+              <th class="hmatrix-th">🦠 Disease Detected</th>
+              <th class="hmatrix-th">✅ Healthy</th>
+              <th class="hmatrix-th">📊 Total</th>
+              <th class="hmatrix-th">Distribution</th>
+            </tr>
+          </thead>
+          <tbody id="matrixBody">
+            <tr><td colspan="5" style="text-align:center;padding:28px;color:rgba(255,255,255,.3);font-size:.88rem">Loading heatmap data…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if history %}
+    <div class="history-section-header">
+      <h2 class="history-section-title">📋 Recent Diagnoses</h2>
+      <span class="history-count">{{ history|length }} records</span>
+    </div>
+    <div class="history-grid">
+      {% for item in history|reverse %}
+      <div class="history-card {{ 'healthy' if item.is_healthy else 'disease' }}">
+        <div class="history-card-top">
+          <span class="history-badge {{ 'badge-healthy' if item.is_healthy else 'badge-disease' }}">
+            {{ '✅ Healthy' if item.is_healthy else '⚠️ Disease' }}
+          </span>
+          {% if item.severity is defined and item.severity %}
+          <span class="history-sev-badge sev-{{ item.severity|lower }}">{{ item.severity }}</span>
+          {% endif %}
+        </div>
+        <h3 class="history-disease">{{ item.friendly_name }}</h3>
+        <div class="history-meta-row">
+          <p class="history-plant">
+            {% if item.plant_type == 'Tomato' %}🍅{% elif item.plant_type == 'Potato' %}🥔{% else %}🫑{% endif %}
+            {{ item.plant_type }}
+          </p>
+          {% if item.confidence is defined %}
+          <span class="history-conf">{{ item.confidence }}%</span>
+          {% endif %}
+        </div>
+        <div class="history-card-footer">
+          <span class="history-date">🕐 {{ item.timestamp }}</span>
+          <a href="{{ url_for('predict_page') }}" class="history-analyze-btn">Analyze Again →</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="history-empty">
+      <div class="empty-icon-wrap">
+        <div class="empty-icon">📋</div>
+      </div>
+      <h3>No predictions yet</h3>
+      <p>Start by uploading your first plant image to see analytics here</p>
+      <a href="{{ url_for('predict_page') }}" class="btn-primary-small">🔬 Go to Diagnose</a>
+    </div>
+    {% endif %}
+  </main>
+
+  <script>
+    fetch('/stats')
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) return;
+        animateCount('statTotal',   data.total);
+        animateCount('statDisease', data.disease);
+        animateCount('statHealthy', data.healthy);
+
+        const plants = [
+          { key: 'Pepper', icon: '🫑' },
+          { key: 'Potato', icon: '🥔' },
+          { key: 'Tomato', icon: '🍅' }
+        ];
+        const maxVal = Math.max(1, data.total);
+        const tbody = document.getElementById('matrixBody');
+        tbody.innerHTML = plants.map(p => {
+          const info  = data.matrix[p.key] || { disease: 0, healthy: 0 };
+          const total = info.disease + info.healthy;
+          const di    = Math.min(1, (info.disease / maxVal) * 3.5);
+          const hi    = Math.min(1, (info.healthy  / maxVal) * 3.5);
+          const dBg   = `rgba(239,68,68,${0.08 + di * 0.62})`;
+          const hBg   = `rgba(34,197,94,${0.08 + hi * 0.62})`;
+          const tBg   = total > 0 ? 'rgba(59,130,246,0.18)' : 'rgba(255,255,255,0.04)';
+          const dCol  = info.disease > 0 ? '#fca5a5' : 'rgba(255,255,255,0.2)';
+          const hCol  = info.healthy  > 0 ? '#4ade80' : 'rgba(255,255,255,0.2)';
+          const tCol  = total         > 0 ? '#93c5fd' : 'rgba(255,255,255,0.2)';
+
+          const dPct  = total > 0 ? Math.round((info.disease / total) * 100) : 0;
+          const hPct  = total > 0 ? Math.round((info.healthy  / total) * 100) : 0;
+
+          return `<tr>
+            <td class="hmatrix-th-row">${p.icon} ${p.key}</td>
+            <td><div class="hmatrix-cell" style="background:${dBg};color:${dCol}">${info.disease}<span>scans</span></div></td>
+            <td><div class="hmatrix-cell" style="background:${hBg};color:${hCol}">${info.healthy}<span>scans</span></div></td>
+            <td><div class="hmatrix-cell" style="background:${tBg};color:${tCol}">${total}<span>total</span></div></td>
+            <td>
+              <div class="dist-bar-wrap">
+                <div class="dist-bar">
+                  <div class="dist-seg dist-disease" style="width:${dPct}%" title="Disease: ${dPct}%"></div>
+                  <div class="dist-seg dist-healthy" style="width:${hPct}%" title="Healthy: ${hPct}%"></div>
+                </div>
+                <div class="dist-labels">
+                  <span style="color:#fca5a5">${dPct}% D</span>
+                  <span style="color:#4ade80">${hPct}% H</span>
+                </div>
+              </div>
+            </td>
+          </tr>`;
+        }).join('');
+      })
+      .catch(() => {});
+
+    function animateCount(id, target) {
+      const el   = document.getElementById(id);
+      let cur    = 0;
+      const step = Math.max(1, Math.ceil(target / 30));
+      const timer = setInterval(() => {
+        cur = Math.min(cur + step, target);
+        el.textContent = cur;
+        if (cur >= target) clearInterval(timer);
+      }, 40);
+    }
+  </script>
+</body>
+</html>
